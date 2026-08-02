@@ -24,6 +24,8 @@ class Fragrance:
 @dataclass(frozen=True)
 class ProductCatalog:
     brand: str
+    maker: str
+    tagline: str
     bottle_design: str
     weekday_fragrances: dict[int, Fragrance]  # keyed 0-4, Mon-Fri
     weekend_spotlight: Fragrance
@@ -48,3 +50,7 @@ class GeneratedPost:
     image_path: Path | None = None
     short_video_path: Path | None = None
     weekly_video_path: Path | None = None
+    # Freeform description of the visual composition/style used (e.g. "comic
+    # panel, 3-frame layout, blue palette"), so future runs can deliberately
+    # pick something different instead of converging on the same look.
+    visual_note: str | None = None

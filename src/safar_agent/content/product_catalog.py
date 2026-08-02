@@ -34,6 +34,8 @@ def load_catalog(path: Path = PRODUCTS_YAML) -> ProductCatalog:
 
     return ProductCatalog(
         brand=raw["brand"],
+        maker=raw.get("maker", raw["brand"]),
+        tagline=raw.get("tagline", ""),
         bottle_design=raw["bottle_design"].strip(),
         weekday_fragrances=weekday_fragrances,
         weekend_spotlight=weekend_spotlight,

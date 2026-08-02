@@ -11,14 +11,19 @@ diamond-cut bottle). Every day it:
 3. Uses an LLM — **GPT or Claude, your choice** — to write the caption,
    hashtags, on-image text, and a short video script for that fragrance +
    theme combo (see "Choosing a caption provider" below).
-4. Composes a feed image from **your uploaded product photos**.
+4. Builds the hero image one of three ways, depending on setup: a plain
+   photo+text composite (default, zero cost), an OpenAI-illustrated scene, or
+   — if you run it via the `safar-daily-post` Claude Code skill — a fresh
+   Claude-designed cartoon/comic scene each day (free, embeds your real
+   product photo, deliberately avoids repeating recent layouts).
 5. Renders a ~15s vertical **short** (Ken Burns zoom + captions + voiceover)
    every day, and a longer **weekly showcase video** across all 5 fragrances
-   once a week.
+   once a week (optionally opening with an OpenAI-generated cover illustration).
 6. Publishes the image to **Facebook** + **Instagram**, the short to
    **Instagram Reels** + **YouTube Shorts**, and the weekly video to
    **YouTube**.
-7. Logs everything to `data/history.json` so themes don't repeat too soon.
+7. Logs everything to `data/history.json`, including a freeform note on each
+   day's visual style, so neither the theme nor the look repeats too soon.
 
 Everything runs in dry-run mode by default — it generates and saves the
 assets under `output/<date>/` without posting anywhere, until you explicitly
@@ -50,6 +55,8 @@ pip install -e .
 # ffmpeg is required for video generation:
 #   macOS:  brew install ffmpeg
 #   Ubuntu: sudo apt-get install ffmpeg
+# Only needed if you're using the safar-daily-post skill's cartoon scenes:
+playwright install chromium
 ```
 
 Copy `.env.example` to `.env` and fill in what you have so far — you can do
@@ -209,9 +216,13 @@ GitHub Actions as a backup that fires if your laptop happens to be off).
 
 If you already pay for Claude Pro/Max and don't want to set up separate
 OpenAI/Anthropic API billing, `.claude/skills/safar-daily-post/SKILL.md` has
-Claude Code write the caption itself — that draws from your subscription's
-usage allowance rather than metered per-token API cost. Everything else
-(image, video, actual posting) still runs through the same Python pipeline.
+Claude Code write the caption **and** design a fresh cartoon-style hero image
+itself — a self-contained HTML/CSS "scene" (comic panels, mini dioramas,
+meme layouts, etc., embedding your real product photo) rendered to PNG for
+free via `scripts/render_scene.py` (headless Chromium). That's what keeps
+every day's post genuinely different instead of the same photo with new text
+on it. Video rendering and actual posting still run through the same Python
+pipeline either way.
 
 1. Install the [Claude Code CLI](https://claude.com/claude-code) and sign in
    with your subscription (`claude auth login`), from inside this repo so it
@@ -256,9 +267,9 @@ assets/audio/bg_music.mp3           optional background music bed (add your own)
 src/safar_agent/
   content/themes.py                theme bank (add/edit ideas here)
   content/idea_generator.py        GPT prompt -> caption/hashtags/video script
-  content/image_generator.py       photo -> branded feed image
+  content/image_generator.py       photo -> branded feed image; OpenAI illustrated backgrounds
   video/daily_short.py             15s vertical short (Ken Burns + captions + VO)
-  video/weekly_video.py            landscape multi-fragrance showcase video
+  video/weekly_video.py            landscape multi-fragrance showcase video (+ optional AI cover art)
   publishers/facebook.py           Graph API photo/video posting
   publishers/instagram.py          Graph API container -> publish flow
   publishers/youtube.py            resumable video upload
@@ -267,8 +278,9 @@ scripts/youtube_oauth_setup.py     one-time OAuth flow to get a refresh token
 scripts/install_launchd.sh         registers the daily job as a macOS launchd agent
 scripts/run_daily.sh               launchd wrapper: OpenAI/Anthropic API captions
 scripts/run_daily_claude.sh        launchd wrapper: Claude subscription captions (headless claude -p)
-scripts/print_today_brief.py       prints today's fragrance/theme JSON, no LLM call
-.claude/skills/safar-daily-post/   skill Claude Code follows to write copy itself
+scripts/print_today_brief.py       prints today's fragrance/theme/recent-visuals JSON, no LLM call
+scripts/render_scene.py            renders a Claude-designed HTML scene to PNG (headless Chromium)
+.claude/skills/safar-daily-post/   skill Claude Code follows to write copy + design the scene
 ```
 
 ## Tests

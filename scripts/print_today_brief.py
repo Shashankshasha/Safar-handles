@@ -15,7 +15,7 @@ import json
 from datetime import date
 
 from safar_agent.content.product_catalog import load_catalog
-from safar_agent.storage.history import pick_theme
+from safar_agent.storage.history import pick_theme, recent_visual_notes
 
 
 def main() -> None:
@@ -33,10 +33,12 @@ def main() -> None:
                 "fragrance_tagline": fragrance.tagline,
                 "scent_notes": fragrance.scent_notes,
                 "liquid_color": fragrance.liquid_color,
+                "reference_photos": [str(p) for p in fragrance.reference_images()],
                 "theme_id": theme.id,
                 "theme_category": theme.category,
                 "theme_hint": theme.hint,
                 "bottle_design": catalog.bottle_design,
+                "recent_visual_notes": recent_visual_notes(),
             },
             indent=2,
         )

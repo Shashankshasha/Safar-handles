@@ -29,9 +29,21 @@ def _save_raw(entries: list[dict]) -> None:
     HISTORY_PATH.write_text(json.dumps(entries, indent=2, default=str))
 
 
+RECENT_VISUAL_NOTE_WINDOW = 10
+
+
 def recent_theme_ids(window: int = RECENT_THEME_WINDOW) -> set[str]:
     entries = _load_raw()[-window:]
     return {e["theme_id"] for e in entries if "theme_id" in e}
+
+
+def recent_visual_notes(window: int = RECENT_VISUAL_NOTE_WINDOW) -> list[str]:
+    """Freeform notes on recent posts' visual composition/style, oldest first
+    — so a human or an LLM designing today's scene can deliberately avoid
+    repeating a layout/palette that was just used.
+    """
+    entries = _load_raw()[-window:]
+    return [e["visual_note"] for e in entries if e.get("visual_note")]
 
 
 def pick_theme(exclude: set[str] | None = None):
