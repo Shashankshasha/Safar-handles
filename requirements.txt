@@ -1,0 +1,10 @@
+openai>=1.40.0
+python-dotenv>=1.0.1
+PyYAML>=6.0.1
+requests>=2.31.0
+Pillow>=10.3.0
+gTTS>=2.5.1
+google-api-python-client>=2.126.0
+google-auth>=2.29.0
+google-auth-oauthlib>=1.2.0
+pytest>=8.0.0

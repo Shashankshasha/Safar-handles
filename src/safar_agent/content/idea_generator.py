@@ -1,0 +1,70 @@
+"""Turns a (fragrance, theme) pair into ready-to-post copy using GPT.
+
+Kept provider-agnostic at the call site: swap OPENAI_TEXT_MODEL in .env for
+whichever GPT-5-family model your account has access to.
+"""
+from __future__ import annotations
+
+import json
+
+from openai import OpenAI
+
+from safar_agent.config import settings
+from safar_agent.content.themes import Theme
+from safar_agent.models import Fragrance
+
+SYSTEM_PROMPT = """\
+You are the social media copywriter for Safar, a car-perfume brand. Safar sells
+5 fragrances in a signature diamond-cut crystal bottle designed to clip onto a
+car's AC vent or sit on the dashboard. The audience is car owners and drivers —
+funny, relatable, car-culture-savvy content performs best. Confident, witty,
+never salesy or corporate. Keep language simple enough for a broad Indian
+driving audience, mixing in light Hinglish where it feels natural.
+
+Always return strict JSON with this shape:
+{
+  "concept": "one-line visual/creative concept a designer or video editor could act on",
+  "instagram_caption": "...",
+  "facebook_caption": "...",
+  "youtube_short_title": "...",
+  "youtube_short_description": "...",
+  "on_image_text": "short punchy text to overlay on the graphic, <=8 words",
+  "video_narration": "2-3 short spoken sentences for a 15-second vertical video voiceover, punchy and conversational",
+  "hashtags": ["#...", "#...", ...]  // 8-12 tags, mix of brand + car + fragrance + trending-style tags
+}
+No commentary outside the JSON.
+"""
+
+
+def _user_prompt(fragrance: Fragrance, theme: Theme, bottle_design: str) -> str:
+    return f"""\
+Fragrance of the day: {fragrance.name}
+Tagline: {fragrance.tagline}
+Scent notes: {', '.join(fragrance.scent_notes)}
+Liquid colour: {fragrance.liquid_color}
+Bottle design (applies to all Safar fragrances): {bottle_design}
+
+Today's creative theme: "{theme.id}" ({theme.category})
+Theme direction: {theme.hint}
+
+Write today's post copy following that theme for this fragrance.
+"""
+
+
+def generate_post_copy(fragrance: Fragrance, theme: Theme, bottle_design: str) -> dict:
+    if not settings.openai_api_key:
+        raise RuntimeError(
+            "OPENAI_API_KEY is not set. Add it to your .env before generating content."
+        )
+
+    client = OpenAI(api_key=settings.openai_api_key)
+    response = client.chat.completions.create(
+        model=settings.openai_text_model,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": _user_prompt(fragrance, theme, bottle_design)},
+        ],
+        response_format={"type": "json_object"},
+    )
+    content = response.choices[0].message.content
+    return json.loads(content)

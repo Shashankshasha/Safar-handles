@@ -1,0 +1,46 @@
+from __future__ import annotations
+
+import os
+from dataclasses import dataclass
+from pathlib import Path
+
+from dotenv import load_dotenv
+
+load_dotenv()
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
+DATA_DIR = REPO_ROOT / "data"
+ASSETS_DIR = REPO_ROOT / "assets"
+OUTPUT_DIR = REPO_ROOT / "output"
+HISTORY_PATH = DATA_DIR / "history.json"
+PRODUCTS_YAML = DATA_DIR / "products.yaml"
+
+
+def _bool_env(name: str, default: bool) -> bool:
+    val = os.getenv(name)
+    if val is None:
+        return default
+    return val.strip().lower() in {"1", "true", "yes", "on"}
+
+
+@dataclass(frozen=True)
+class Settings:
+    openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
+    openai_text_model: str = os.getenv("OPENAI_TEXT_MODEL", "gpt-5")
+    openai_image_model: str = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+
+    fb_page_id: str | None = os.getenv("FB_PAGE_ID")
+    fb_page_access_token: str | None = os.getenv("FB_PAGE_ACCESS_TOKEN")
+
+    ig_business_account_id: str | None = os.getenv("IG_BUSINESS_ACCOUNT_ID")
+    public_media_base_url: str | None = os.getenv("PUBLIC_MEDIA_BASE_URL")
+
+    yt_client_id: str | None = os.getenv("YT_CLIENT_ID")
+    yt_client_secret: str | None = os.getenv("YT_CLIENT_SECRET")
+    yt_refresh_token: str | None = os.getenv("YT_REFRESH_TOKEN")
+
+    weekly_video_weekday: int = int(os.getenv("WEEKLY_VIDEO_WEEKDAY", "6"))
+    dry_run: bool = _bool_env("DRY_RUN", True)
+
+
+settings = Settings()

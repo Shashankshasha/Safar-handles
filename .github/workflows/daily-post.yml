@@ -1,0 +1,64 @@
+name: Safar daily content agent
+
+on:
+  schedule:
+    # 09:00 IST = 03:30 UTC — adjust to taste
+    - cron: "30 3 * * *"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Actually publish (unchecked = dry run, only generates assets)"
+        type: boolean
+        default: false
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install ffmpeg
+        run: sudo apt-get update && sudo apt-get install -y ffmpeg
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -e .
+
+      - name: Run daily agent
+        env:
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          OPENAI_TEXT_MODEL: ${{ vars.OPENAI_TEXT_MODEL }}
+          OPENAI_IMAGE_MODEL: ${{ vars.OPENAI_IMAGE_MODEL }}
+          FB_PAGE_ID: ${{ secrets.FB_PAGE_ID }}
+          FB_PAGE_ACCESS_TOKEN: ${{ secrets.FB_PAGE_ACCESS_TOKEN }}
+          IG_BUSINESS_ACCOUNT_ID: ${{ secrets.IG_BUSINESS_ACCOUNT_ID }}
+          PUBLIC_MEDIA_BASE_URL: ${{ vars.PUBLIC_MEDIA_BASE_URL }}
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET: ${{ secrets.AWS_S3_BUCKET }}
+          AWS_S3_REGION: ${{ vars.AWS_S3_REGION }}
+          YT_CLIENT_ID: ${{ secrets.YT_CLIENT_ID }}
+          YT_CLIENT_SECRET: ${{ secrets.YT_CLIENT_SECRET }}
+          YT_REFRESH_TOKEN: ${{ secrets.YT_REFRESH_TOKEN }}
+          WEEKLY_VIDEO_WEEKDAY: ${{ vars.WEEKLY_VIDEO_WEEKDAY }}
+          DRY_RUN: ${{ vars.DRY_RUN }}
+        run: |
+          # Scheduled runs always publish for real. Manual runs respect the
+          # "publish" checkbox so you can dry-run and inspect artifacts first.
+          if [ "${{ github.event_name }}" = "schedule" ] || [ "${{ github.event.inputs.publish }}" = "true" ]; then
+            python -m safar_agent.scheduler.daily_job --publish
+          else
+            python -m safar_agent.scheduler.daily_job
+          fi
+
+      - name: Upload generated assets
+        uses: actions/upload-artifact@v4
+        with:
+          name: safar-post-${{ github.run_id }}
+          path: output/
+          retention-days: 14

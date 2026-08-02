@@ -1,0 +1,19 @@
+__pycache__/
+*.pyc
+.venv/
+venv/
+.env
+*.egg-info/
+
+# generated media (regenerated daily, not source-controlled)
+output/*
+!output/.gitkeep
+
+# local history / logs
+data/history.json
+
+# OS
+.DS_Store
+
+# OAuth secrets downloaded from Google Cloud Console
+scripts/client_secret.json

@@ -1,0 +1,24 @@
+[project]
+name = "safar-agent"
+version = "0.1.0"
+description = "Daily AI content agent for Safar car perfumes (Facebook, Instagram, YouTube)"
+requires-python = ">=3.10"
+dependencies = [
+    "openai>=1.40.0",
+    "python-dotenv>=1.0.1",
+    "PyYAML>=6.0.1",
+    "requests>=2.31.0",
+    "Pillow>=10.3.0",
+    "gTTS>=2.5.1",
+    "google-api-python-client>=2.126.0",
+    "google-auth>=2.29.0",
+    "google-auth-oauthlib>=1.2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+]
+
+[tool.setuptools.packages.find]
+where = ["src"]
