@@ -25,9 +25,16 @@ def _bool_env(name: str, default: bool) -> bool:
 
 @dataclass(frozen=True)
 class Settings:
+    # Which LLM writes captions/scripts by default: "openai" or "anthropic".
+    # Only image generation is OpenAI-only (image_generator.generate_ai_background).
+    text_provider: str = os.getenv("TEXT_PROVIDER", "openai")
+
     openai_api_key: str | None = os.getenv("OPENAI_API_KEY")
     openai_text_model: str = os.getenv("OPENAI_TEXT_MODEL", "gpt-5")
     openai_image_model: str = os.getenv("OPENAI_IMAGE_MODEL", "gpt-image-1")
+
+    anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
+    anthropic_text_model: str = os.getenv("ANTHROPIC_TEXT_MODEL", "claude-sonnet-5")
 
     fb_page_id: str | None = os.getenv("FB_PAGE_ID")
     fb_page_access_token: str | None = os.getenv("FB_PAGE_ACCESS_TOKEN")

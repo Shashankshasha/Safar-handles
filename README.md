@@ -8,8 +8,9 @@ diamond-cut bottle). Every day it:
 2. Picks a **creative theme** (action-figure diorama, movie parody, meme
    format, POV driver humor, ASMR unboxing, festival tie-ins, and 15 more —
    see `src/safar_agent/content/themes.py`) that wasn't used in the last week.
-3. Uses GPT to write the caption, hashtags, on-image text, and a short video
-   script for that fragrance + theme combo.
+3. Uses an LLM — **GPT or Claude, your choice** — to write the caption,
+   hashtags, on-image text, and a short video script for that fragrance +
+   theme combo (see "Choosing a caption provider" below).
 4. Composes a feed image from **your uploaded product photos**.
 5. Renders a ~15s vertical **short** (Ken Burns zoom + captions + voiceover)
    every day, and a longer **weekly showcase video** across all 5 fragrances
@@ -57,24 +58,58 @@ this incrementally (see below, everything degrades gracefully in dry-run).
 ## 3. Try it in dry-run first
 
 ```bash
-cp .env.example .env   # add at least OPENAI_API_KEY
+cp .env.example .env   # add at least one of OPENAI_API_KEY / ANTHROPIC_API_KEY
 python -m safar_agent.scheduler.daily_job
 ```
 
 This generates today's image + short video (and the weekly video, on
 `WEEKLY_VIDEO_WEEKDAY`) into `output/<today>/` **without posting anywhere**.
 Look at the output, tweak `data/products.yaml` / `content/themes.py` / the
-prompt in `content/idea_generator.py` until you're happy with the voice.
+prompt in `content/providers/prompts.py` until you're happy with the voice.
+
+### Choosing a caption provider (and comparing them)
+
+Caption/hashtag/script generation is provider-agnostic — you can use OpenAI
+GPT, Anthropic Claude, or both, and neither choice touches image/video
+rendering or posting logic:
+
+```bash
+# Set a default in .env
+TEXT_PROVIDER=openai      # or: anthropic
+
+# Or override per run
+python -m safar_agent.scheduler.daily_job --provider anthropic
+
+# Generate today's caption from BOTH providers and compare, without
+# touching images/video and without posting anywhere:
+python -m safar_agent.scheduler.daily_job --compare-providers
+```
+
+`--compare-providers` prints both results and saves them to
+`output/<today>/compare_providers.json` so you can judge quality/voice/cost
+side by side before committing to one. You only need an API key for the
+provider(s) you actually use — if you already pay for Claude, Anthropic
+alone is enough to run the whole thing with no separate OpenAI billing setup.
+Image generation (`content/image_generator.py`'s optional
+`generate_ai_background`) is OpenAI-only regardless of `TEXT_PROVIDER`, but
+composing images from your own uploaded photos (the default path) doesn't
+call any image-generation API at all.
 
 ## 4. Connect the real accounts
 
 Each of these is a real platform integration, and each requires credentials
 only you can generate:
 
-### OpenAI
-- `OPENAI_API_KEY` from platform.openai.com.
-- `OPENAI_TEXT_MODEL` — set to whichever GPT-5-family model your account has
-  access to (defaults to `gpt-5`).
+### Caption provider — OpenAI and/or Anthropic
+You only need to fill in whichever of these you set as `TEXT_PROVIDER` (or
+both, to use `--compare-providers`).
+
+- **OpenAI**: `OPENAI_API_KEY` from platform.openai.com. `OPENAI_TEXT_MODEL`
+  — whichever GPT-5-family model your account has access to (defaults to
+  `gpt-5`).
+- **Anthropic**: `ANTHROPIC_API_KEY` from console.anthropic.com.
+  `ANTHROPIC_TEXT_MODEL` — defaults to `claude-sonnet-5`; `claude-haiku-4-5-20251001`
+  is the cheapest option if cost is the deciding factor.
 
 ### Facebook Page + Instagram (one Meta app covers both)
 

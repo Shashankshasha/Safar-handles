@@ -1,12 +1,15 @@
 """The daily entrypoint. Run via:
 
-    python -m safar_agent.scheduler.daily_job            # dry run (default, safe)
-    python -m safar_agent.scheduler.daily_job --publish   # actually posts
+    python -m safar_agent.scheduler.daily_job                     # dry run (default, safe)
+    python -m safar_agent.scheduler.daily_job --publish            # actually posts
+    python -m safar_agent.scheduler.daily_job --provider anthropic # use Claude instead of GPT
+    python -m safar_agent.scheduler.daily_job --compare-providers  # caption-only, both providers
 
 Each run:
   - picks today's fragrance-of-the-day (Mon-Fri rotate the 5 fragrances,
     weekends spotlight the diamond bottle) and an unused-recently theme
-  - generates caption/hashtags/on-image text/video narration via GPT
+  - generates caption/hashtags/on-image text/video narration via whichever
+    LLM TEXT_PROVIDER (or --provider) selects
   - composes a feed image from your uploaded product photo
   - always builds a ~15s vertical short (voiceover + captions)
   - on WEEKLY_VIDEO_WEEKDAY, also builds the long-form YouTube showcase video
@@ -17,14 +20,16 @@ Each run:
 from __future__ import annotations
 
 import argparse
+import json
 import logging
 from datetime import date
 from pathlib import Path
 
 from safar_agent.config import OUTPUT_DIR, settings
-from safar_agent.content.idea_generator import generate_post_copy
+from safar_agent.content.idea_generator import generate_post_copy, generate_post_copy_all
 from safar_agent.content.image_generator import compose_hero_image
 from safar_agent.content.product_catalog import load_catalog
+from safar_agent.content.providers import PROVIDERS
 from safar_agent.models import GeneratedPost
 from safar_agent.publishers import facebook, instagram, youtube
 from safar_agent.storage.history import pick_theme, record_post, today_str
@@ -38,7 +43,7 @@ log = logging.getLogger("daily_job")
 BG_MUSIC = Path("assets/audio/bg_music.mp3")
 
 
-def run(publish: bool) -> GeneratedPost:
+def run(publish: bool, provider: str | None = None) -> GeneratedPost:
     today = date.today()
     weekday = today.weekday()
     day_dir = OUTPUT_DIR / today.isoformat()
@@ -47,9 +52,14 @@ def run(publish: bool) -> GeneratedPost:
     catalog = load_catalog()
     fragrance = catalog.fragrance_for_weekday(weekday)
     theme = pick_theme()
-    log.info("Today's fragrance: %s | theme: %s", fragrance.name, theme.id)
+    log.info(
+        "Today's fragrance: %s | theme: %s | text provider: %s",
+        fragrance.name,
+        theme.id,
+        provider or settings.text_provider,
+    )
 
-    copy = generate_post_copy(fragrance, theme, catalog.bottle_design)
+    copy = generate_post_copy(fragrance, theme, catalog.bottle_design, provider=provider)
 
     image_path = compose_hero_image(fragrance, copy["on_image_text"], day_dir / "post.jpg")
 
@@ -152,6 +162,33 @@ def _publish_everywhere(post: GeneratedPost, copy: dict) -> None:
         )
 
 
+def compare_providers() -> Path:
+    """Generates today's caption from every configured provider (OpenAI,
+    Anthropic) without touching images/video/publishing, so you can eyeball
+    quality and cost before picking a default. Nothing here posts anywhere.
+    """
+    today = date.today()
+    day_dir = OUTPUT_DIR / today.isoformat()
+    day_dir.mkdir(parents=True, exist_ok=True)
+
+    catalog = load_catalog()
+    fragrance = catalog.fragrance_for_weekday(today.weekday())
+    theme = pick_theme()
+    log.info("Comparing providers for %s | theme: %s", fragrance.name, theme.id)
+
+    results = generate_post_copy_all(fragrance, theme, catalog.bottle_design)
+
+    out_path = day_dir / "compare_providers.json"
+    out_path.write_text(json.dumps(results, indent=2))
+
+    for name, result in results.items():
+        print(f"\n{'=' * 20} {name} {'=' * 20}")
+        print(json.dumps(result, indent=2))
+
+    print(f"\nSaved comparison to {out_path}")
+    return out_path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description="Safar daily content agent")
     parser.add_argument(
@@ -160,13 +197,29 @@ def main() -> None:
         help="Actually publish to Facebook/Instagram/YouTube. Without this flag "
         "(or with DRY_RUN=true in .env) the agent only generates assets locally.",
     )
+    parser.add_argument(
+        "--provider",
+        choices=list(PROVIDERS),
+        default=None,
+        help="Override TEXT_PROVIDER from .env for this run (openai or anthropic).",
+    )
+    parser.add_argument(
+        "--compare-providers",
+        action="store_true",
+        help="Generate today's caption from every provider and print/save them "
+        "side by side. Skips image/video generation and never publishes.",
+    )
     args = parser.parse_args()
+
+    if args.compare_providers:
+        compare_providers()
+        return
 
     publish = args.publish and not settings.dry_run
     if args.publish and settings.dry_run:
         log.warning("DRY_RUN=true in .env is overriding --publish; no real posts will be made.")
 
-    run(publish=publish)
+    run(publish=publish, provider=args.provider)
 
 
 if __name__ == "__main__":
