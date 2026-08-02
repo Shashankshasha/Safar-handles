@@ -1,50 +1,56 @@
 brand: Safar
+maker: "Grace One"
+tagline: "Invisible Luxury"
+website: "https://graceone.in"
 bottle_design: >
-  Diamond-cut crystal bottle — faceted like a polished diamond, chrome vent-clip cap,
-  designed to catch light on the dashboard or AC vent. Shared silhouette across the
-  whole range; each fragrance is distinguished by liquid colour and cap trim.
+  Hanging car aroma diffuser — a faceted diamond-cut glass bottle beneath a
+  beech-wood pyramid cap, strung on a braided cord with a carved wooden bead,
+  designed to hang from the rearview mirror. Natural plant extracts, no added
+  alcohol, heat resistant (no deformation in summer), fragrance lasts up to
+  60 days. Shared silhouette across the whole range; each fragrance is
+  distinguished by the glass colour.
 
 # One fragrance is "featured" each weekday (Mon-Fri). Weekends spotlight the
 # diamond bottle design itself / rotate a best-seller poll instead of a single scent.
 fragrances:
-  - id: oud-voyage
-    name: "Safar Oud Voyage"
-    tagline: "Bold oud for long highway drives"
-    scent_notes: [oud, amber, leather]
-    liquid_color: "black-gold"
-    image_dir: assets/products/oud-voyage
+  - id: musk
+    name: "Safar Musk"
+    tagline: "Deep. Warm. Timeless."
+    scent_notes: [musk, amber, woody base]
+    liquid_color: "deep navy blue"
+    image_dir: assets/products/musk
     weekday: 0 # Monday
 
-  - id: citrus-drift
-    name: "Safar Citrus Drift"
-    tagline: "Zesty citrus burst for the morning commute"
-    scent_notes: [orange, lemon, mint]
-    liquid_color: "yellow-clear"
-    image_dir: assets/products/citrus-drift
+  - id: lavender
+    name: "Safar Lavender"
+    tagline: "Calming. Floral. Serene."
+    scent_notes: [lavender, soft floral]
+    liquid_color: "purple"
+    image_dir: assets/products/lavender
     weekday: 1 # Tuesday
 
-  - id: musk-highway
-    name: "Safar Musk Highway"
-    tagline: "Smooth musk for smooth rides"
-    scent_notes: [white musk, sandalwood]
-    liquid_color: "white-silver"
-    image_dir: assets/products/musk-highway
+  - id: sandalwood
+    name: "Safar Sandalwood"
+    tagline: "Rich. Woody. Grounding."
+    scent_notes: [sandalwood, cedar, warm wood]
+    liquid_color: "amber brown"
+    image_dir: assets/products/sandalwood
     weekday: 2 # Wednesday
 
-  - id: lavender-cruise
-    name: "Safar Lavender Cruise"
-    tagline: "Calm lavender for stress-free traffic"
-    scent_notes: [lavender, vanilla]
-    liquid_color: "purple"
-    image_dir: assets/products/lavender-cruise
+  - id: vanilla
+    name: "Safar Vanilla"
+    tagline: "Sweet. Creamy. Comforting."
+    scent_notes: [vanilla, warm sweet]
+    liquid_color: "golden yellow"
+    image_dir: assets/products/vanilla
     weekday: 3 # Thursday
 
-  - id: woody-trail
-    name: "Safar Woody Trail"
-    tagline: "Earthy woody trail for off-road spirits"
-    scent_notes: [cedarwood, vetiver]
-    liquid_color: "brown-green"
-    image_dir: assets/products/woody-trail
+  - id: jasmine
+    name: "Safar Jasmine"
+    tagline: "Fresh. Floral. Radiant."
+    scent_notes: [jasmine, white floral]
+    liquid_color: "light aqua blue"
+    image_dir: assets/products/jasmine
     weekday: 4 # Friday
 
 weekend_spotlight:

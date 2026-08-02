@@ -71,9 +71,9 @@ def compose_hero_image(
     pad = 48
     text_y = size[1] - banner_height + pad
 
-    draw.text((pad, text_y), "SAFAR", font=_font(56), fill=BRAND_COLOR)
-    draw.text((pad, text_y + 70), fragrance.name.upper(), font=_font(38), fill="white")
-    draw.text((pad, text_y + 120), on_image_text, font=_font(30), fill="white")
+    draw.text((pad, text_y), "GRACE ONE", font=_font(34), fill=BRAND_COLOR)
+    draw.text((pad, text_y + 46), fragrance.name.upper(), font=_font(50), fill="white")
+    draw.text((pad, text_y + 110), on_image_text, font=_font(30), fill="white")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(output_path, quality=92)

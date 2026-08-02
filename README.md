@@ -28,11 +28,11 @@ turn on publishing (see below).
 Drop real photos of each fragrance / the diamond bottle into:
 
 ```
-assets/products/oud-voyage/
-assets/products/citrus-drift/
-assets/products/musk-highway/
-assets/products/lavender-cruise/
-assets/products/woody-trail/
+assets/products/musk/
+assets/products/lavender/
+assets/products/sandalwood/
+assets/products/vanilla/
+assets/products/jasmine/
 assets/products/diamond-bottle-hero/   <- used for weekend posts + the weekly video
 ```
 
@@ -76,22 +76,49 @@ only you can generate:
 - `OPENAI_TEXT_MODEL` — set to whichever GPT-5-family model your account has
   access to (defaults to `gpt-5`).
 
-### Facebook Page
-1. Create a Meta developer app at developers.facebook.com.
-2. Get a Page Access Token for your Safar page with
-   `pages_manage_posts` + `pages_read_engagement` scopes, and exchange the
-   short-lived token for a long-lived one (Meta's Graph API Explorer /
-   Access Token Debugger walks you through this).
-3. Set `FB_PAGE_ID` and `FB_PAGE_ACCESS_TOKEN`.
+### Facebook Page + Instagram (one Meta app covers both)
 
-### Instagram
-Instagram posting goes through the **same** Graph API app/token as Facebook,
-against your Instagram **Business/Creator** account linked to that Page.
-1. Set `IG_BUSINESS_ACCOUNT_ID` (find it via
-   `GET /{page-id}?fields=instagram_business_account`).
-2. Instagram's API requires a **public URL** for any image/video it posts —
-   it can't accept uploaded bytes directly. Configure a media host: the
-   simplest is an S3 bucket (`AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`,
+For a single business posting to its own Page/Instagram account, you do
+**not** need Meta's full App Review — that's only required when other
+people's accounts will use your app. Keeping the app in **Development Mode**
+with yourself as Admin is enough, and is much faster to set up:
+
+1. Go to developers.facebook.com → **My Apps** → **Create App** → type
+   "Business". Leave it in Development Mode.
+2. Under **Add Product**, add **Facebook Login** and the **Graph API** (no
+   review needed yet).
+3. Make sure your personal Facebook account (the one that administers the
+   Safar Page and its linked Instagram Business account) is listed as an
+   **Admin** on the app, under App Roles.
+4. Go to **Tools → Graph API Explorer**, pick your app, click **Generate
+   Access Token**, and grant these permissions when prompted:
+   `pages_show_list`, `pages_manage_posts`, `pages_read_engagement`,
+   `instagram_basic`, `instagram_content_publish`. Because you're an Admin on
+   a Development-mode app, Meta grants these without review.
+5. That token is short-lived (~1 hour). Exchange it for a long-lived
+   Page Access Token (~60 days, and Pages tokens generated this way don't
+   expire in practice as long as you keep re-deriving them the same way):
+   ```
+   GET https://graph.facebook.com/v19.0/oauth/access_token?
+     grant_type=fb_exchange_token&client_id=<APP_ID>&client_secret=<APP_SECRET>
+     &fb_exchange_token=<SHORT_LIVED_USER_TOKEN>
+   ```
+   then use that long-lived **user** token to fetch the Page token:
+   ```
+   GET https://graph.facebook.com/v19.0/me/accounts?access_token=<LONG_LIVED_USER_TOKEN>
+   ```
+   The `access_token` in that response, for your Safar Page, is what goes in
+   `FB_PAGE_ACCESS_TOKEN`. Set `FB_PAGE_ID` from the same response.
+6. Get your Instagram Business Account ID linked to that Page:
+   ```
+   GET https://graph.facebook.com/v19.0/{page-id}?fields=instagram_business_account&access_token={page-access-token}
+   ```
+   Set `IG_BUSINESS_ACCOUNT_ID` to the id it returns. (Your Instagram account
+   must already be a Business/Creator account connected to the Facebook Page
+   in Meta Business Suite — do that first if you haven't.)
+7. Instagram's API additionally requires a **public URL** for any image/video
+   it posts — it can't accept uploaded bytes directly. Configure a media
+   host: the simplest is an S3 bucket (`AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`,
    `AWS_SECRET_ACCESS_KEY`, `PUBLIC_MEDIA_BASE_URL`), or swap
    `src/safar_agent/publishers/media_host.py` for Cloudinary/GCS/whatever you
    already use.
@@ -115,6 +142,35 @@ Both the env flag and the CLI flag have to agree to publish for real — this
 is a deliberate double safety switch given it posts to public accounts.
 
 ## 5. Automate it daily
+
+Two options — pick one (or both: keep GitHub Actions as a backup that fires
+if your laptop happens to be off).
+
+### Option A: your Mac (launchd) — runs locally, no cloud account needed
+
+1. Make sure `.venv` exists and dependencies are installed (Step 2 above) and
+   your `.env` is filled in with `DRY_RUN=false`.
+2. Register the daily job as a launchd agent:
+   ```bash
+   ./scripts/install_launchd.sh
+   ```
+   This installs `~/Library/LaunchAgents/com.safar.dailyjob.plist`, set to
+   fire at **09:00 local time** every day (edit the `Hour`/`Minute` values in
+   `scripts/com.safar.dailyjob.plist.template` and re-run the install script
+   to change it).
+3. Test it immediately without waiting for 9am:
+   ```bash
+   launchctl start com.safar.dailyjob
+   tail -f output/launchd.log output/launchd.error.log
+   ```
+4. Caveats specific to running from a laptop: it only fires if the Mac is
+   powered on; if it's asleep at 9am, launchd runs the job as soon as it
+   wakes instead (not exactly on time, but it won't just skip the day). If
+   the lid is closed and plugged in, macOS Power Nap / scheduled wake can
+   keep it running on time — see System Settings → Battery → Options.
+5. To uninstall: `launchctl unload ~/Library/LaunchAgents/com.safar.dailyjob.plist && rm ~/Library/LaunchAgents/com.safar.dailyjob.plist`.
+
+### Option B: GitHub Actions (cloud, always-on regardless of your laptop)
 
 `.github/workflows/daily-post.yml` runs the agent every day via GitHub
 Actions cron (09:00 IST by default — edit the cron expression to taste).
@@ -143,6 +199,8 @@ src/safar_agent/
   publishers/youtube.py            resumable video upload
   scheduler/daily_job.py           orchestrates the whole daily run
 scripts/youtube_oauth_setup.py     one-time OAuth flow to get a refresh token
+scripts/install_launchd.sh         registers the daily job as a macOS launchd agent
+scripts/run_daily.sh               wrapper launchd calls (activates venv, runs the job)
 ```
 
 ## Tests
