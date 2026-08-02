@@ -7,7 +7,7 @@
 
     <key>ProgramArguments</key>
     <array>
-        <string>__REPO_DIR__/scripts/run_daily.sh</string>
+        <string>__REPO_DIR__/scripts/__RUN_SCRIPT__</string>
     </array>
 
     <key>WorkingDirectory</key>

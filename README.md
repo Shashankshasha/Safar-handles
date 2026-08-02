@@ -178,10 +178,10 @@ is a deliberate double safety switch given it posts to public accounts.
 
 ## 5. Automate it daily
 
-Two options — pick one (or both: keep GitHub Actions as a backup that fires
-if your laptop happens to be off).
+Three options — pick one (or combine: e.g. Claude subscription for captions,
+GitHub Actions as a backup that fires if your laptop happens to be off).
 
-### Option A: your Mac (launchd) — runs locally, no cloud account needed
+### Option A: your Mac (launchd), captions via OpenAI/Anthropic API
 
 1. Make sure `.venv` exists and dependencies are installed (Step 2 above) and
    your `.env` is filled in with `DRY_RUN=false`.
@@ -205,7 +205,37 @@ if your laptop happens to be off).
    keep it running on time — see System Settings → Battery → Options.
 5. To uninstall: `launchctl unload ~/Library/LaunchAgents/com.safar.dailyjob.plist && rm ~/Library/LaunchAgents/com.safar.dailyjob.plist`.
 
-### Option B: GitHub Actions (cloud, always-on regardless of your laptop)
+### Option B: your Mac (launchd), captions via your Claude subscription instead of an API key
+
+If you already pay for Claude Pro/Max and don't want to set up separate
+OpenAI/Anthropic API billing, `.claude/skills/safar-daily-post/SKILL.md` has
+Claude Code write the caption itself — that draws from your subscription's
+usage allowance rather than metered per-token API cost. Everything else
+(image, video, actual posting) still runs through the same Python pipeline.
+
+1. Install the [Claude Code CLI](https://claude.com/claude-code) and sign in
+   with your subscription (`claude auth login`), from inside this repo so it
+   picks up the skill.
+2. Try it manually first, interactively, so you can watch what it does:
+   ```bash
+   claude
+   > Use the safar-daily-post skill to generate today's Safar post as a dry run.
+   ```
+   Check `output/<date>/copy.json` and the generated image/video before
+   trusting it unattended.
+3. Register the launchd agent pointed at the Claude-driven script instead:
+   ```bash
+   ./scripts/install_launchd.sh claude
+   ```
+   This runs `scripts/run_daily_claude.sh`, which calls `claude -p` in
+   headless mode. That requires `--dangerously-skip-permissions` (nothing's
+   there to click "allow" at 9am) — read the comments at the top of that
+   script before relying on it. It stays in dry-run mode by default; only
+   set `SAFAR_PUBLISH=true` in the script (or `launchctl setenv`) once you've
+   reviewed several days of dry-run output and are comfortable with it
+   posting unattended.
+
+### Option C: GitHub Actions (cloud, always-on regardless of your laptop)
 
 `.github/workflows/daily-post.yml` runs the agent every day via GitHub
 Actions cron (09:00 IST by default — edit the cron expression to taste).
@@ -235,7 +265,10 @@ src/safar_agent/
   scheduler/daily_job.py           orchestrates the whole daily run
 scripts/youtube_oauth_setup.py     one-time OAuth flow to get a refresh token
 scripts/install_launchd.sh         registers the daily job as a macOS launchd agent
-scripts/run_daily.sh               wrapper launchd calls (activates venv, runs the job)
+scripts/run_daily.sh               launchd wrapper: OpenAI/Anthropic API captions
+scripts/run_daily_claude.sh        launchd wrapper: Claude subscription captions (headless claude -p)
+scripts/print_today_brief.py       prints today's fragrance/theme JSON, no LLM call
+.claude/skills/safar-daily-post/   skill Claude Code follows to write copy itself
 ```
 
 ## Tests

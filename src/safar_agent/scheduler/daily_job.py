@@ -4,6 +4,7 @@
     python -m safar_agent.scheduler.daily_job --publish            # actually posts
     python -m safar_agent.scheduler.daily_job --provider anthropic # use Claude instead of GPT
     python -m safar_agent.scheduler.daily_job --compare-providers  # caption-only, both providers
+    python -m safar_agent.scheduler.daily_job --copy-file out.json # use pre-written copy, no LLM API call
 
 Each run:
   - picks today's fragrance-of-the-day (Mon-Fri rotate the 5 fragrances,
@@ -30,6 +31,7 @@ from safar_agent.content.idea_generator import generate_post_copy, generate_post
 from safar_agent.content.image_generator import compose_hero_image
 from safar_agent.content.product_catalog import load_catalog
 from safar_agent.content.providers import PROVIDERS
+from safar_agent.content.themes import theme_by_id
 from safar_agent.models import GeneratedPost
 from safar_agent.publishers import facebook, instagram, youtube
 from safar_agent.storage.history import pick_theme, record_post, today_str
@@ -43,7 +45,17 @@ log = logging.getLogger("daily_job")
 BG_MUSIC = Path("assets/audio/bg_music.mp3")
 
 
-def run(publish: bool, provider: str | None = None) -> GeneratedPost:
+def run(
+    publish: bool,
+    provider: str | None = None,
+    copy_override: dict | None = None,
+) -> GeneratedPost:
+    """If copy_override is given (e.g. written by the safar-daily-post Claude
+    Code skill instead of an LLM API call), it must include a "_meta.theme_id"
+    matching a theme id from content/themes.py — that pins which theme was
+    actually written for, since theme selection is otherwise random. No LLM
+    provider is called in that case.
+    """
     today = date.today()
     weekday = today.weekday()
     day_dir = OUTPUT_DIR / today.isoformat()
@@ -51,15 +63,23 @@ def run(publish: bool, provider: str | None = None) -> GeneratedPost:
 
     catalog = load_catalog()
     fragrance = catalog.fragrance_for_weekday(weekday)
-    theme = pick_theme()
-    log.info(
-        "Today's fragrance: %s | theme: %s | text provider: %s",
-        fragrance.name,
-        theme.id,
-        provider or settings.text_provider,
-    )
 
-    copy = generate_post_copy(fragrance, theme, catalog.bottle_design, provider=provider)
+    if copy_override is not None:
+        theme_id = copy_override.get("_meta", {}).get("theme_id")
+        if not theme_id:
+            raise ValueError('copy_override is missing required "_meta.theme_id"')
+        theme = theme_by_id(theme_id)
+        copy = copy_override
+        log.info("Today's fragrance: %s | theme: %s | copy: pre-written", fragrance.name, theme.id)
+    else:
+        theme = pick_theme()
+        log.info(
+            "Today's fragrance: %s | theme: %s | text provider: %s",
+            fragrance.name,
+            theme.id,
+            provider or settings.text_provider,
+        )
+        copy = generate_post_copy(fragrance, theme, catalog.bottle_design, provider=provider)
 
     image_path = compose_hero_image(fragrance, copy["on_image_text"], day_dir / "post.jpg")
 
@@ -209,6 +229,14 @@ def main() -> None:
         help="Generate today's caption from every provider and print/save them "
         "side by side. Skips image/video generation and never publishes.",
     )
+    parser.add_argument(
+        "--copy-file",
+        type=Path,
+        default=None,
+        help="Path to pre-written copy JSON (see scripts/print_today_brief.py "
+        "and the safar-daily-post skill) instead of calling an LLM provider. "
+        "Must include a top-level \"_meta\": {\"theme_id\": \"...\"}.",
+    )
     args = parser.parse_args()
 
     if args.compare_providers:
@@ -219,7 +247,8 @@ def main() -> None:
     if args.publish and settings.dry_run:
         log.warning("DRY_RUN=true in .env is overriding --publish; no real posts will be made.")
 
-    run(publish=publish, provider=args.provider)
+    copy_override = json.loads(args.copy_file.read_text()) if args.copy_file else None
+    run(publish=publish, provider=args.provider, copy_override=copy_override)
 
 
 if __name__ == "__main__":
