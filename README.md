@@ -9,13 +9,18 @@ diamond-cut bottle). Every day it:
    format, POV driver humor, ASMR unboxing, festival tie-ins, and 15 more —
    see `src/safar_agent/content/themes.py`) that wasn't used in the last week.
 3. Uses an LLM — **GPT or Claude, your choice** — to write the caption,
-   hashtags, on-image text, and a short video script for that fragrance +
-   theme combo (see "Choosing a caption provider" below).
-4. Builds the hero image one of three ways, depending on setup: a plain
-   photo+text composite (default, zero cost), an OpenAI-illustrated scene, or
-   — if you run it via the `safar-daily-post` Claude Code skill — a fresh
-   Claude-designed cartoon/comic scene each day (free, embeds your real
-   product photo, deliberately avoids repeating recent layouts).
+   hashtags, on-image text, video script, and an **anime-character image
+   prompt** for that fragrance + theme combo (see "Choosing a caption
+   provider" below).
+4. Builds the hero image one of three ways, depending on setup:
+   - **`HERO_IMAGE_STYLE=anime`** (default): a Japanese anime/manga-style
+     scene generated via OpenAI's image API — a different character and
+     setting every day, the Safar diffuser visible in-scene. A few cents/day.
+   - **`HERO_IMAGE_STYLE=photo`**: a plain photo+text composite from your
+     uploaded product photo — free, zero image-generation calls.
+   - If you run it via the `safar-daily-post` Claude Code skill: a
+     Claude-designed cartoon/comic scene (free, embeds your real product
+     photo, deliberately avoids repeating recent layouts) instead of either.
 5. Renders a ~15s vertical **short** (Ken Burns zoom + captions + voiceover)
    every day, and a longer **weekly showcase video** across all 5 fragrances
    once a week (optionally opening with an OpenAI-generated cover illustration).

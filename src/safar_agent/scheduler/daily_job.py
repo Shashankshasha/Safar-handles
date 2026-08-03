@@ -105,9 +105,26 @@ def run(
         video_background = image_override
         video_caption = ""
     else:
-        image_path = compose_hero_image(fragrance, copy["on_image_text"], day_dir / "post.jpg")
-        raw_photos = fragrance.reference_images()
-        video_background = raw_photos[0] if raw_photos else image_path
+        image_path = None
+        if settings.hero_image_style == "anime" and settings.openai_api_key and copy.get("image_prompt"):
+            try:
+                image_path = generate_ai_background(
+                    copy["image_prompt"], day_dir / "post.jpg", size="1024x1536"
+                )
+            except Exception:
+                log.warning(
+                    "Anime hero image generation failed, falling back to photo composite",
+                    exc_info=True,
+                )
+
+        if image_path is not None:
+            # AI-generated scenes have no baked-in text, so the same clean
+            # image works for both the feed post and the video background.
+            video_background = image_path
+        else:
+            image_path = compose_hero_image(fragrance, copy["on_image_text"], day_dir / "post.jpg")
+            raw_photos = fragrance.reference_images()
+            video_background = raw_photos[0] if raw_photos else image_path
         video_caption = copy["on_image_text"]
 
     voiceover_path = None

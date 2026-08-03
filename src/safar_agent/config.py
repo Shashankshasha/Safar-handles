@@ -36,6 +36,13 @@ class Settings:
     anthropic_api_key: str | None = os.getenv("ANTHROPIC_API_KEY")
     anthropic_text_model: str = os.getenv("ANTHROPIC_TEXT_MODEL", "claude-sonnet-5")
 
+    # Daily hero image style: "anime" (AI-generated anime-character scene via
+    # OpenAI, a few cents/day) or "photo" (free — composites your uploaded
+    # product photo with a text banner, no image-generation API call).
+    # Falls back to "photo" automatically if OPENAI_API_KEY isn't set or a
+    # generation call fails.
+    hero_image_style: str = os.getenv("HERO_IMAGE_STYLE", "anime")
+
     fb_page_id: str | None = os.getenv("FB_PAGE_ID")
     fb_page_access_token: str | None = os.getenv("FB_PAGE_ACCESS_TOKEN")
 
