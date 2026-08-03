@@ -5,7 +5,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from safar_agent.video.ffmpeg_utils import build_audio_track, run_ffmpeg, write_drawtext_file
+from safar_agent.video.ffmpeg_utils import build_audio_track, run_ffmpeg
+from safar_agent.video.text_overlay import render_caption_overlay
 
 WEEKLY_SIZE = (1920, 1080)
 SEGMENT_DURATION = 8  # seconds per fragrance
@@ -23,30 +24,35 @@ def generate_weekly_video(
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     width, height = WEEKLY_SIZE
+    n = len(segments)
 
     inputs: list[str] = []
     filter_parts: list[str] = []
-    textfiles: list[Path] = []
+    overlay_paths: list[Path] = []
     concat_labels: list[str] = []
 
     for idx, (image_path, text) in enumerate(segments):
+        overlay_path = output_path.parent / f"{output_path.stem}_seg{idx}_overlay.png"
+        render_caption_overlay(text, WEEKLY_SIZE, overlay_path, font_size=48, box_y_from_bottom=160)
+        overlay_paths.append(overlay_path)
+
+        img_idx = idx * 2
+        overlay_idx = idx * 2 + 1
         inputs += ["-loop", "1", "-t", str(segment_duration), "-i", str(image_path)]
-        textfile = write_drawtext_file(text)
-        textfiles.append(textfile)
+        inputs += ["-loop", "1", "-t", str(segment_duration), "-i", str(overlay_path)]
+
         filter_parts.append(
-            f"[{idx}:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
-            f"crop={width}:{height},"
-            f"drawtext=textfile='{textfile}':fontsize=48:fontcolor=white:"
-            f"box=1:boxcolor=black@0.5:boxborderw=20:x=(w-text_w)/2:y=h-160,"
-            f"format=yuv420p[v{idx}]"
+            f"[{img_idx}:v]scale={width}:{height}:force_original_aspect_ratio=increase,"
+            f"crop={width}:{height},format=yuv420p[bg{idx}];"
+            f"[bg{idx}][{overlay_idx}:v]overlay=0:0,format=yuv420p[v{idx}]"
         )
         concat_labels.append(f"[v{idx}]")
 
-    filter_parts.append(f"{''.join(concat_labels)}concat=n={len(segments)}:v=1:a=0[vout]")
+    filter_parts.append(f"{''.join(concat_labels)}concat=n={n}:v=1:a=0[vout]")
 
-    total_duration = segment_duration * len(segments)
+    total_duration = segment_duration * n
     extra_inputs, audio_filter, audio_map = build_audio_track(
-        narration_path, bg_music_path, first_input_index=len(segments)
+        narration_path, bg_music_path, first_input_index=n * 2
     )
     inputs += extra_inputs
     if audio_filter:
@@ -74,7 +80,7 @@ def generate_weekly_video(
         ]
         run_ffmpeg(args)
     finally:
-        for tf in textfiles:
-            tf.unlink(missing_ok=True)
+        for p in overlay_paths:
+            p.unlink(missing_ok=True)
 
     return output_path

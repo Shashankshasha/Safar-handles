@@ -13,9 +13,10 @@ from __future__ import annotations
 import base64
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw
 
 from safar_agent.config import settings
+from safar_agent.fonts import bold_font
 from safar_agent.models import Fragrance
 
 FEED_SIZE = (1080, 1350)  # Instagram/Facebook portrait feed post
@@ -23,15 +24,6 @@ STORY_SIZE = (1080, 1920)  # Reels/Shorts/Stories canvas
 
 BRAND_COLOR = (212, 175, 55)  # gold, matches "diamond bottle" positioning
 BANNER_COLOR = (10, 10, 10, 190)
-
-
-def _font(size: int) -> ImageFont.ImageFont:
-    try:
-        return ImageFont.truetype(
-            "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf", size
-        )
-    except OSError:
-        return ImageFont.load_default()
 
 
 def _fit_cover(img: Image.Image, size: tuple[int, int]) -> Image.Image:
@@ -71,9 +63,9 @@ def compose_hero_image(
     pad = 48
     text_y = size[1] - banner_height + pad
 
-    draw.text((pad, text_y), "GRACE ONE", font=_font(34), fill=BRAND_COLOR)
-    draw.text((pad, text_y + 46), fragrance.name.upper(), font=_font(50), fill="white")
-    draw.text((pad, text_y + 110), on_image_text, font=_font(30), fill="white")
+    draw.text((pad, text_y), "GRACE ONE", font=bold_font(34), fill=BRAND_COLOR)
+    draw.text((pad, text_y + 46), fragrance.name.upper(), font=bold_font(50), fill="white")
+    draw.text((pad, text_y + 110), on_image_text, font=bold_font(30), fill="white")
 
     output_path.parent.mkdir(parents=True, exist_ok=True)
     canvas.convert("RGB").save(output_path, quality=92)

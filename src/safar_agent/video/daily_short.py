@@ -1,13 +1,17 @@
 """Builds the daily vertical short (Instagram Reels / YouTube Shorts).
 
-A slow Ken-Burns zoom on the product hero image, a caption burned in near the
-bottom, and an audio bed (voiceover and/or background music, or silence).
+A slow Ken-Burns zoom on the product hero image, a caption composited near
+the bottom via a Pillow-rendered overlay (see text_overlay.py — deliberately
+not ffmpeg's drawtext filter, which needs a font-rendering build many ffmpeg
+installs don't have), and an audio bed (voiceover and/or background music,
+or silence).
 """
 from __future__ import annotations
 
 from pathlib import Path
 
-from safar_agent.video.ffmpeg_utils import build_audio_track, run_ffmpeg, write_drawtext_file
+from safar_agent.video.ffmpeg_utils import build_audio_track, run_ffmpeg
+from safar_agent.video.text_overlay import render_caption_overlay
 
 SHORT_SIZE = (1080, 1920)
 DEFAULT_DURATION = 15
@@ -24,24 +28,24 @@ def generate_daily_short(
     fps: int = DEFAULT_FPS,
 ) -> Path:
     output_path.parent.mkdir(parents=True, exist_ok=True)
-    textfile = write_drawtext_file(caption_text)
     width, height = SHORT_SIZE
 
+    overlay_path = output_path.parent / f"{output_path.stem}_caption_overlay.png"
+    render_caption_overlay(caption_text, SHORT_SIZE, overlay_path)
+
     video_filter = (
-        f"scale=-2:{height * 2},"
+        f"[0:v]scale=-2:{height * 2},"
         f"zoompan=z='min(zoom+0.0012,1.4)':d={duration * fps}:"
         f"x='iw/2-(iw/zoom/2)':y='ih/2-(ih/zoom/2)':s={width}x{height}:fps={fps},"
-        f"drawtext=textfile='{textfile}':fontsize=54:fontcolor=white:"
-        f"box=1:boxcolor=black@0.55:boxborderw=24:"
-        f"x=(w-text_w)/2:y=h-340,"
-        f"format=yuv420p[v]"
+        f"format=yuv420p[bg];"
+        f"[bg][1:v]overlay=0:0[v]"
     )
 
-    inputs = ["-loop", "1", "-i", str(image_path)]
+    inputs = ["-loop", "1", "-i", str(image_path), "-loop", "1", "-i", str(overlay_path)]
     filter_complex_parts = [video_filter]
 
     extra_inputs, audio_filter, audio_map = build_audio_track(
-        voiceover_path, bg_music_path, first_input_index=1
+        voiceover_path, bg_music_path, first_input_index=2
     )
     inputs += extra_inputs
     if audio_filter:
@@ -69,6 +73,6 @@ def generate_daily_short(
         ]
         run_ffmpeg(args)
     finally:
-        textfile.unlink(missing_ok=True)
+        overlay_path.unlink(missing_ok=True)
 
     return output_path

@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import subprocess
-import tempfile
 from pathlib import Path
 
 
@@ -14,16 +13,6 @@ def run_ffmpeg(args: list[str]) -> None:
     result = subprocess.run(cmd, capture_output=True, text=True)
     if result.returncode != 0:
         raise FFmpegError(f"ffmpeg failed: {' '.join(cmd)}\n{result.stderr}")
-
-
-def write_drawtext_file(text: str) -> Path:
-    """ffmpeg's drawtext escaping is fiendish; textfile= sidesteps it entirely."""
-    tmp = tempfile.NamedTemporaryFile(
-        mode="w", suffix=".txt", delete=False, encoding="utf-8"
-    )
-    tmp.write(text)
-    tmp.close()
-    return Path(tmp.name)
 
 
 def build_audio_track(

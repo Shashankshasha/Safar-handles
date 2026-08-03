@@ -92,12 +92,23 @@ def run(
         )
         copy = generate_post_copy(fragrance, theme, catalog.bottle_design, provider=provider)
 
+    # The video always gets its own caption overlay burned in (see
+    # video/text_overlay.py), so its background must be a *clean* image —
+    # reusing an image that already has on_image_text baked into it would
+    # show the caption twice. A Claude-designed scene (image_override) is
+    # trusted to already convey whatever text it needs, so no overlay is
+    # added on top of it there.
     if image_override is not None:
         if not image_override.exists():
             raise FileNotFoundError(f"--image-file path does not exist: {image_override}")
         image_path = image_override
+        video_background = image_override
+        video_caption = ""
     else:
         image_path = compose_hero_image(fragrance, copy["on_image_text"], day_dir / "post.jpg")
+        raw_photos = fragrance.reference_images()
+        video_background = raw_photos[0] if raw_photos else image_path
+        video_caption = copy["on_image_text"]
 
     voiceover_path = None
     try:
@@ -107,8 +118,8 @@ def run(
 
     bg_music = BG_MUSIC if BG_MUSIC.exists() else None
     short_path = generate_daily_short(
-        image_path=image_path,
-        caption_text=copy["on_image_text"],
+        image_path=video_background,
+        caption_text=video_caption,
         output_path=day_dir / "short.mp4",
         voiceover_path=voiceover_path,
         bg_music_path=bg_music,
