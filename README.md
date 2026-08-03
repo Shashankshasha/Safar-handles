@@ -159,11 +159,22 @@ with yourself as Admin is enough, and is much faster to set up:
    must already be a Business/Creator account connected to the Facebook Page
    in Meta Business Suite — do that first if you haven't.)
 7. Instagram's API additionally requires a **public URL** for any image/video
-   it posts — it can't accept uploaded bytes directly. Configure a media
-   host: the simplest is an S3 bucket (`AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`,
-   `AWS_SECRET_ACCESS_KEY`, `PUBLIC_MEDIA_BASE_URL`), or swap
-   `src/safar_agent/publishers/media_host.py` for Cloudinary/GCS/whatever you
-   already use.
+   it posts — it can't accept uploaded bytes directly. Two options are wired
+   up (`MEDIA_HOST_PROVIDER` in `.env`):
+   - **`github`** (free, no cloud account): commits each generated file to a
+     dedicated `media` branch of this repo via the GitHub API and serves it
+     via `raw.githubusercontent.com`. Requires **the repo to be public**
+     (private-repo raw URLs need auth Instagram's servers can't provide) and
+     permanently keeps every posted file in that branch's git history. Needs
+     `GITHUB_TOKEN` — a personal access token (Settings → Developer settings
+     → Personal access tokens → generate one scoped to Contents:
+     read/write on this repo) — and `GITHUB_REPO` (`youruser/yourrepo`).
+   - **`s3`**: needs an AWS account, bucket, and credentials
+     (`AWS_S3_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`,
+     `PUBLIC_MEDIA_BASE_URL`).
+
+   Swap `src/safar_agent/publishers/media_host.py` for Cloudinary/GCS/
+   whatever else if you'd rather use a different provider.
 
 ### YouTube
 1. In Google Cloud Console, enable "YouTube Data API v3" and create an OAuth

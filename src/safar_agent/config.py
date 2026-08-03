@@ -40,7 +40,17 @@ class Settings:
     fb_page_access_token: str | None = os.getenv("FB_PAGE_ACCESS_TOKEN")
 
     ig_business_account_id: str | None = os.getenv("IG_BUSINESS_ACCOUNT_ID")
+
+    # Instagram's API needs a public URL for any image/video it posts.
+    # MEDIA_HOST_PROVIDER: "github" (free, commits media to a branch of this
+    # repo and serves it via raw.githubusercontent.com — repo must be public)
+    # or "s3" (near-free, needs an AWS account).
+    media_host_provider: str = os.getenv("MEDIA_HOST_PROVIDER", "s3")
     public_media_base_url: str | None = os.getenv("PUBLIC_MEDIA_BASE_URL")
+
+    github_token: str | None = os.getenv("GITHUB_TOKEN")
+    github_repo: str | None = os.getenv("GITHUB_REPO")
+    github_media_branch: str = os.getenv("GITHUB_MEDIA_BRANCH", "media")
 
     yt_client_id: str | None = os.getenv("YT_CLIENT_ID")
     yt_client_secret: str | None = os.getenv("YT_CLIENT_SECRET")
