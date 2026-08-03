@@ -203,39 +203,66 @@ def _try_generate_weekly_cover_art(catalog, day_dir: Path) -> Path | None:
         return None
 
 
+def _youtube_configured() -> bool:
+    return bool(settings.yt_client_id and settings.yt_client_secret and settings.yt_refresh_token)
+
+
 def _publish_everywhere(post: GeneratedPost, copy: dict) -> None:
+    """Publishes to every platform that's configured, independently — one
+    platform failing (or not being set up yet) never blocks the others or
+    stops the post from being logged to history.
+    """
     hashtag_str = " ".join(post.hashtags)
 
-    log.info("Publishing image post to Facebook")
-    facebook.publish_photo(post.image_path, f"{copy['facebook_caption']}\n\n{hashtag_str}")
+    try:
+        log.info("Publishing image post to Facebook")
+        facebook.publish_photo(post.image_path, f"{copy['facebook_caption']}\n\n{hashtag_str}")
+    except Exception:
+        log.error("Facebook publish failed", exc_info=True)
 
-    log.info("Publishing image post to Instagram")
-    instagram.publish_image(post.image_path, f"{post.caption}\n\n{hashtag_str}")
+    try:
+        log.info("Publishing image post to Instagram")
+        instagram.publish_image(post.image_path, f"{post.caption}\n\n{hashtag_str}")
+    except Exception:
+        log.error("Instagram image publish failed", exc_info=True)
 
-    log.info("Publishing daily short to Instagram Reels")
-    instagram.publish_reel(post.short_video_path, f"{post.caption}\n\n{hashtag_str}")
+    try:
+        log.info("Publishing daily short to Instagram Reels")
+        instagram.publish_reel(post.short_video_path, f"{post.caption}\n\n{hashtag_str}")
+    except Exception:
+        log.error("Instagram Reel publish failed", exc_info=True)
 
-    log.info("Publishing daily short to YouTube Shorts")
-    youtube.upload_video(
-        post.short_video_path,
-        title=copy["youtube_short_title"],
-        description=f"{copy['youtube_short_description']}\n\n{hashtag_str}",
-        tags=[h.lstrip("#") for h in post.hashtags],
-        is_short=True,
-    )
+    if not _youtube_configured():
+        log.info("YouTube not configured yet (YT_CLIENT_ID/SECRET/REFRESH_TOKEN) — skipping")
+        return
+
+    try:
+        log.info("Publishing daily short to YouTube Shorts")
+        youtube.upload_video(
+            post.short_video_path,
+            title=copy["youtube_short_title"],
+            description=f"{copy['youtube_short_description']}\n\n{hashtag_str}",
+            tags=[h.lstrip("#") for h in post.hashtags],
+            is_short=True,
+        )
+    except Exception:
+        log.error("YouTube Shorts publish failed", exc_info=True)
 
     if post.weekly_video_path:
-        log.info("Publishing weekly showcase video to YouTube")
-        youtube.upload_video(
-            post.weekly_video_path,
-            title="Safar Car Perfumes — Weekly Fragrance Showcase",
-            description=(
-                "This week's tour through all 5 Safar fragrances and the "
-                f"signature diamond-cut bottle.\n\n{hashtag_str}"
-            ),
-            tags=[h.lstrip("#") for h in post.hashtags],
-            is_short=False,
-        )
+        try:
+            log.info("Publishing weekly showcase video to YouTube")
+            youtube.upload_video(
+                post.weekly_video_path,
+                title="Safar Car Perfumes — Weekly Fragrance Showcase",
+                description=(
+                    "This week's tour through all 5 Safar fragrances and the "
+                    f"signature diamond-cut bottle.\n\n{hashtag_str}"
+                ),
+                tags=[h.lstrip("#") for h in post.hashtags],
+                is_short=False,
+            )
+        except Exception:
+            log.error("YouTube weekly video publish failed", exc_info=True)
 
 
 def compare_providers() -> Path:
