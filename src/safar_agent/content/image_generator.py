@@ -72,6 +72,19 @@ def compose_hero_image(
     return output_path
 
 
+def crop_to_size(input_path: Path, output_path: Path, size: tuple[int, int] = FEED_SIZE) -> Path:
+    """Center-crops an image to an exact aspect ratio. Used to bring
+    OpenAI-generated images (portrait 2:3, ratio 0.667) into Instagram's
+    allowed feed-photo range (4:5 to 1.91:1, i.e. 0.8-1.91) — posting outside
+    that range gets rejected with a 400 from the Graph API.
+    """
+    img = Image.open(input_path).convert("RGB")
+    cropped = _fit_cover(img, size)
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    cropped.save(output_path, quality=92)
+    return output_path
+
+
 def generate_ai_background(prompt: str, output_path: Path, size: str = "1024x1536") -> Path:
     """Optional: generate a fully illustrated/stylised scene via OpenAI images API.
 

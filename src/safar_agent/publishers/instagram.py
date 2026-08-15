@@ -22,11 +22,23 @@ def _require_config() -> None:
         )
 
 
+def _check(response: requests.Response) -> requests.Response:
+    """requests' raise_for_status() only says "400 Bad Request" — Meta's
+    actual reason (bad aspect ratio, expired token, etc.) is in the response
+    body, so surface that instead of forcing a re-run just to see it.
+    """
+    if not response.ok:
+        raise RuntimeError(
+            f"Instagram Graph API error ({response.status_code}) for {response.url}: "
+            f"{response.text}"
+        )
+    return response
+
+
 def _create_container(**fields) -> str:
     url = f"{GRAPH_API_BASE}/{settings.ig_business_account_id}/media"
     fields["access_token"] = settings.fb_page_access_token
-    response = requests.post(url, data=fields, timeout=120)
-    response.raise_for_status()
+    response = _check(requests.post(url, data=fields, timeout=120))
     return response.json()["id"]
 
 
@@ -34,12 +46,13 @@ def _wait_until_ready(creation_id: str, timeout_s: int = 300, poll_every_s: int 
     url = f"{GRAPH_API_BASE}/{creation_id}"
     waited = 0
     while waited < timeout_s:
-        response = requests.get(
-            url,
-            params={"fields": "status_code", "access_token": settings.fb_page_access_token},
-            timeout=30,
+        response = _check(
+            requests.get(
+                url,
+                params={"fields": "status_code", "access_token": settings.fb_page_access_token},
+                timeout=30,
+            )
         )
-        response.raise_for_status()
         status = response.json().get("status_code")
         if status == "FINISHED":
             return
@@ -52,12 +65,13 @@ def _wait_until_ready(creation_id: str, timeout_s: int = 300, poll_every_s: int 
 
 def _publish(creation_id: str) -> dict:
     url = f"{GRAPH_API_BASE}/{settings.ig_business_account_id}/media_publish"
-    response = requests.post(
-        url,
-        data={"creation_id": creation_id, "access_token": settings.fb_page_access_token},
-        timeout=60,
+    response = _check(
+        requests.post(
+            url,
+            data={"creation_id": creation_id, "access_token": settings.fb_page_access_token},
+            timeout=60,
+        )
     )
-    response.raise_for_status()
     return response.json()
 
 

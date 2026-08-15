@@ -20,17 +20,31 @@ def _require_config() -> None:
         raise RuntimeError("FB_PAGE_ID / FB_PAGE_ACCESS_TOKEN are not set in .env")
 
 
+def _check(response: requests.Response) -> requests.Response:
+    """requests' raise_for_status() only says "400 Bad Request" — Meta's
+    actual reason is in the response body, so surface that directly instead
+    of forcing a re-run just to see it.
+    """
+    if not response.ok:
+        raise RuntimeError(
+            f"Facebook Graph API error ({response.status_code}) for {response.url}: "
+            f"{response.text}"
+        )
+    return response
+
+
 def publish_photo(image_path: Path, caption: str) -> dict:
     _require_config()
     url = f"{GRAPH_API_BASE}/{settings.fb_page_id}/photos"
     with open(image_path, "rb") as fh:
-        response = requests.post(
-            url,
-            data={"caption": caption, "access_token": settings.fb_page_access_token},
-            files={"source": fh},
-            timeout=120,
+        response = _check(
+            requests.post(
+                url,
+                data={"caption": caption, "access_token": settings.fb_page_access_token},
+                files={"source": fh},
+                timeout=120,
+            )
         )
-    response.raise_for_status()
     return response.json()
 
 
@@ -47,6 +61,5 @@ def publish_video(video_path: Path, description: str, title: str | None = None) 
     if title:
         data["title"] = title
     with open(video_path, "rb") as fh:
-        response = requests.post(url, data=data, files={"source": fh}, timeout=600)
-    response.raise_for_status()
+        response = _check(requests.post(url, data=data, files={"source": fh}, timeout=600))
     return response.json()

@@ -29,7 +29,11 @@ from pathlib import Path
 
 from safar_agent.config import OUTPUT_DIR, settings
 from safar_agent.content.idea_generator import generate_post_copy, generate_post_copy_all
-from safar_agent.content.image_generator import compose_hero_image, generate_ai_background
+from safar_agent.content.image_generator import (
+    compose_hero_image,
+    crop_to_size,
+    generate_ai_background,
+)
 from safar_agent.content.occasions import occasion_for_date
 from safar_agent.content.product_catalog import load_catalog
 from safar_agent.content.providers import PROVIDERS
@@ -130,20 +134,23 @@ def run(
         image_path = None
         if settings.hero_image_style == "anime" and settings.openai_api_key and copy.get("image_prompt"):
             try:
-                image_path = generate_ai_background(
-                    copy["image_prompt"], day_dir / "post.jpg", size="1024x1536"
+                raw_anime_path = generate_ai_background(
+                    copy["image_prompt"], day_dir / "post_raw.png", size="1024x1536"
                 )
+                # OpenAI's portrait output (2:3, ratio 0.667) is more extreme
+                # than Instagram's allowed feed-photo range (4:5 to 1.91:1,
+                # i.e. 0.8-1.91) — crop before posting or the Graph API
+                # rejects it with a 400. The video keeps the uncropped
+                # source since its Ken Burns zoom recrops dynamically anyway.
+                image_path = crop_to_size(raw_anime_path, day_dir / "post.jpg")
+                video_background = raw_anime_path
             except Exception:
                 log.warning(
                     "Anime hero image generation failed, falling back to photo composite",
                     exc_info=True,
                 )
 
-        if image_path is not None:
-            # AI-generated scenes have no baked-in text, so the same clean
-            # image works for both the feed post and the video background.
-            video_background = image_path
-        else:
+        if image_path is None:
             image_path = compose_hero_image(fragrance, copy["on_image_text"], day_dir / "post.jpg")
             raw_photos = fragrance.reference_images()
             video_background = raw_photos[0] if raw_photos else image_path
