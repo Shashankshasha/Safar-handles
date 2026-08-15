@@ -13,6 +13,11 @@
 # with the output quality.
 set -euo pipefail
 
+# launchd runs scripts with a minimal PATH — it does NOT load your shell's
+# .zprofile/.zshrc, so Homebrew tools (ffmpeg, and the `claude` CLI if it was
+# installed via Homebrew) won't be found unless added here explicitly.
+export PATH="/opt/homebrew/bin:/usr/local/bin:$PATH"
+
 REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$REPO_DIR"
 source .venv/bin/activate
