@@ -7,7 +7,11 @@ diamond-cut bottle). Every day it:
    weekends spotlight the diamond bottle itself.
 2. Picks a **creative theme** (action-figure diorama, movie parody, meme
    format, POV driver humor, ASMR unboxing, festival tie-ins, and 15 more —
-   see `src/safar_agent/content/themes.py`) that wasn't used in the last week.
+   see `src/safar_agent/content/themes.py`) that wasn't used in the last week
+   — unless today is a listed special occasion (`data/occasions.yaml`:
+   Independence Day, Republic Day, etc.), in which case that takes over as
+   an occasion greeting instead. Add more occasions anytime, no code changes
+   needed — just a `date: "MM-DD"` entry.
 3. Uses an LLM — **GPT or Claude, your choice** — to write the caption,
    hashtags, on-image text, video script, and an **anime-character image
    prompt** for that fragrance + theme combo (see "Choosing a caption
@@ -278,6 +282,7 @@ safely.
 
 ```
 data/products.yaml                 the 5 fragrances + diamond bottle + rotation
+data/occasions.yaml                festival/national-day calendar (overrides theme rotation)
 assets/products/<id>/               your uploaded photos, per fragrance
 assets/audio/bg_music.mp3           optional background music bed (add your own)
 src/safar_agent/

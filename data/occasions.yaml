@@ -1,0 +1,37 @@
+# Special-occasion calendar. Any date listed here overrides the normal
+# random theme rotation for that day — the post becomes an occasion greeting
+# first, with the fragrance/product woven in naturally rather than being the
+# focus. Dates are MM-DD and recur every year. Add more anytime; no code
+# changes needed.
+occasions:
+  - date: "01-26"
+    name: "Republic Day"
+    hint: >
+      Wish India a very Happy Republic Day. Proud, patriotic tone — tricolor
+      (saffron/white/green) visual motifs, pride in the Constitution and
+      nationhood. Tie to the open-road/journey theme naturally if it fits.
+      This is a goodwill/community post, not a hard sell — keep any product
+      mention light.
+
+  - date: "08-15"
+    name: "Independence Day"
+    hint: >
+      Wish India a very Happy Independence Day. Warm, proud, patriotic tone —
+      tricolor (saffron/white/green) visual motifs, national pride, "freedom
+      of the open road" as a natural, non-cheesy metaphor tying back to
+      driving/Safar. This is a goodwill/community post, not a hard sell —
+      keep any product mention light and natural.
+
+  - date: "10-02"
+    name: "Gandhi Jayanti"
+    hint: >
+      A simple, dignified tribute to Gandhi Jayanti. Respectful and calm tone
+      — not promotional, no hard sell, no jokes. A brief reflective message
+      is enough; product presence should be minimal/incidental.
+
+  - date: "01-01"
+    name: "New Year's Day"
+    hint: >
+      Wish everyone a Happy New Year. Upbeat, fresh-start energy — new year,
+      new drives/journeys ahead. Natural fit for the brand's "fresh start"
+      angle; can be a bit more product-forward than the national holidays.

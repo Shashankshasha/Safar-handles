@@ -7,6 +7,7 @@ from __future__ import annotations
 import json
 import re
 
+from safar_agent.content.occasions import Occasion
 from safar_agent.content.themes import Theme
 from safar_agent.models import Fragrance
 
@@ -48,7 +49,23 @@ Return ONLY that JSON object, no markdown fences, no commentary before or after 
 """
 
 
-def build_user_prompt(fragrance: Fragrance, theme: Theme, bottle_design: str) -> str:
+def build_user_prompt(
+    fragrance: Fragrance,
+    theme: Theme,
+    bottle_design: str,
+    occasion: Occasion | None = None,
+) -> str:
+    occasion_block = ""
+    if occasion is not None:
+        occasion_block = f"""
+
+SPECIAL OCCASION TODAY: {occasion.name}
+{occasion.hint}
+This takes priority over the theme direction above — write today's post as
+an occasion greeting first (including the image_prompt/scene), with the
+fragrance/product woven in naturally rather than being the focus.
+"""
+
     return f"""\
 Fragrance of the day: {fragrance.name}
 Tagline: {fragrance.tagline}
@@ -58,7 +75,7 @@ Bottle design (applies to all Safar fragrances): {bottle_design}
 
 Today's creative theme: "{theme.id}" ({theme.category})
 Theme direction: {theme.hint}
-
+{occasion_block}
 Write today's post copy following that theme for this fragrance.
 """
 

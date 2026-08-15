@@ -30,9 +30,10 @@ from pathlib import Path
 from safar_agent.config import OUTPUT_DIR, settings
 from safar_agent.content.idea_generator import generate_post_copy, generate_post_copy_all
 from safar_agent.content.image_generator import compose_hero_image, generate_ai_background
+from safar_agent.content.occasions import occasion_for_date
 from safar_agent.content.product_catalog import load_catalog
 from safar_agent.content.providers import PROVIDERS
-from safar_agent.content.themes import theme_by_id
+from safar_agent.content.themes import Theme, theme_by_id
 from safar_agent.models import GeneratedPost
 from safar_agent.publishers import facebook, instagram, youtube
 from safar_agent.storage.history import pick_theme, record_post, today_str
@@ -44,6 +45,15 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(me
 log = logging.getLogger("daily_job")
 
 BG_MUSIC = Path("assets/audio/bg_music.mp3")
+
+# Used for logging/history when a special-occasion post (data/occasions.yaml)
+# overrides the normal random theme rotation for the day. Deliberately not in
+# content/themes.py's THEMES list, so pick_theme() never selects it randomly.
+OCCASION_THEME = Theme(
+    id="national-occasion",
+    category="seasonal",
+    hint="Special calendar occasion post — see the occasion details for direction.",
+)
 
 
 def run(
@@ -83,14 +93,26 @@ def run(
         copy = copy_override
         log.info("Today's fragrance: %s | theme: %s | copy: pre-written", fragrance.name, theme.id)
     else:
-        theme = pick_theme()
-        log.info(
-            "Today's fragrance: %s | theme: %s | text provider: %s",
-            fragrance.name,
-            theme.id,
-            provider or settings.text_provider,
+        occasion = occasion_for_date(today)
+        if occasion is not None:
+            theme = OCCASION_THEME
+            log.info(
+                "Today is %s — writing a special occasion post for %s | text provider: %s",
+                occasion.name,
+                fragrance.name,
+                provider or settings.text_provider,
+            )
+        else:
+            theme = pick_theme()
+            log.info(
+                "Today's fragrance: %s | theme: %s | text provider: %s",
+                fragrance.name,
+                theme.id,
+                provider or settings.text_provider,
+            )
+        copy = generate_post_copy(
+            fragrance, theme, catalog.bottle_design, provider=provider, occasion=occasion
         )
-        copy = generate_post_copy(fragrance, theme, catalog.bottle_design, provider=provider)
 
     # The video always gets its own caption overlay burned in (see
     # video/text_overlay.py), so its background must be a *clean* image —
@@ -293,10 +315,15 @@ def compare_providers() -> Path:
 
     catalog = load_catalog()
     fragrance = catalog.fragrance_for_weekday(today.weekday())
-    theme = pick_theme()
-    log.info("Comparing providers for %s | theme: %s", fragrance.name, theme.id)
+    occasion = occasion_for_date(today)
+    theme = OCCASION_THEME if occasion is not None else pick_theme()
+    log.info(
+        "Comparing providers for %s | %s",
+        fragrance.name,
+        f"occasion: {occasion.name}" if occasion else f"theme: {theme.id}",
+    )
 
-    results = generate_post_copy_all(fragrance, theme, catalog.bottle_design)
+    results = generate_post_copy_all(fragrance, theme, catalog.bottle_design, occasion=occasion)
 
     out_path = day_dir / "compare_providers.json"
     out_path.write_text(json.dumps(results, indent=2))
